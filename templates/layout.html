@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback Collector</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<header>
+<h1>Online Feedback Collector</h1>
+<nav>
+<a href="/">Home</a>
+<a href="/login">Admin Login</a>
+<a href="/admin-dashboard">Dashboard</a>
+</nav>
+</header>
+
+<main class="container">
+{% block content %}{% endblock %}
+</main>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+<footer>
+<p>© 2026 Online Feedback Collector</p>
+</footer>
+
+</body>
+</html>

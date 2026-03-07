@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h2>Submit Feedback</h2>
+
+<form action="/submit-feedback" method="POST">
+
+<label>Name</label>
+<input type="text" name="name" required maxlength="100" placeholder="Enter your full name">
+
+<label>Email</label>
+<input type="email" name="email" required maxlength="120" placeholder="Enter your email">
+
+<label>Rating</label>
+
+<div class="rating">
+
+<input type="radio" name="rating" value="5" id="star5">
+<label for="star5">★</label>
+
+<input type="radio" name="rating" value="4" id="star4">
+<label for="star4">★</label>
+
+<input type="radio" name="rating" value="3" id="star3">
+<label for="star3">★</label>
+
+<input type="radio" name="rating" value="2" id="star2">
+<label for="star2">★</label>
+
+<input type="radio" name="rating" value="1" id="star1">
+<label for="star1">★</label>
+
+</div>
+
+{% if request.args.get('success') %}
+<p style="color:green;">Thank you! Feedback submitted successfully.</p>
+{% endif %}
+
+<label>Comments</label>
+<textarea name="comments" rows="4" maxlength="1000" placeholder="Share your feedback"></textarea>
+
+<button type="submit">Submit</button>
+
+</form>
+
+<p><a href="/login">Admin Login</a></p>
+<p><a href="/admin-dashboard">View Admin Dashboard</a></p>
+
+{% endblock %}
