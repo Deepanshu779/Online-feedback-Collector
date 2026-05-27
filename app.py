@@ -3,6 +3,7 @@ import io
 import os
 import sqlite3
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask import Flask, Response, jsonify, redirect, render_template, request, session, url_for
 
@@ -10,8 +11,6 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
 DB_PATH = "database.db"
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 
 
 def get_db_connection():
@@ -31,6 +30,15 @@ def init_db():
                 rating INTEGER,
                 comments TEXT,
                 date_submitted TEXT
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE,
+                password TEXT
             )
             """
         )
@@ -137,13 +145,39 @@ def login():
         username = request.form.get("username", "")
         password = request.form.get("password", "")
 
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        with get_db_connection() as conn:
+            user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+
+        if user and check_password_hash(user["password"], password):
             session["is_admin"] = True
+            session["user_id"] = user["id"]
             return redirect(url_for("admin"))
 
         return render_template("login.html", error="Invalid username or password")
 
     return render_template("login.html")
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if not username or not password:
+            return render_template("signup.html", error="Username and password are required")
+
+        with get_db_connection() as conn:
+            existing = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+            if existing:
+                return render_template("signup.html", error="Username already exists")
+
+            hashed_pw = generate_password_hash(password)
+            conn.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_pw))
+
+        return redirect(url_for("login"))
+
+    return render_template("signup.html")
 
 
 @app.route("/logout")
