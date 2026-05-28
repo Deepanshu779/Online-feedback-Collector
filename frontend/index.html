@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback Collector - Home</title>
+<link rel="stylesheet" href="static/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<header>
+<h1>Online Feedback Collector</h1>
+<nav>
+<a href="index.html">Home</a>
+<a href="login.html">Admin Login</a>
+<a href="admin.html">Dashboard</a>
+</nav>
+</header>
+
+<main class="container">
+<h2>Submit Feedback</h2>
+
+<form id="feedbackForm">
+
+<label>Name</label>
+<input type="text" name="name" required maxlength="100" placeholder="Enter your full name">
+
+<label>Email</label>
+<input type="email" name="email" required maxlength="120" placeholder="Enter your email">
+
+<label>Rating</label>
+
+<div class="rating">
+
+<input type="radio" name="rating" value="5" id="star5">
+<label for="star5">★</label>
+
+<input type="radio" name="rating" value="4" id="star4">
+<label for="star4">★</label>
+
+<input type="radio" name="rating" value="3" id="star3">
+<label for="star3">★</label>
+
+<input type="radio" name="rating" value="2" id="star2">
+<label for="star2">★</label>
+
+<input type="radio" name="rating" value="1" id="star1">
+<label for="star1">★</label>
+
+</div>
+
+<p id="successMessage" style="color:green; display:none;">Thank you! Feedback submitted successfully.</p>
+<p id="errorMessage" style="color:red; display:none;"></p>
+
+<label>Comments</label>
+<textarea name="comments" rows="4" maxlength="1000" placeholder="Share your feedback"></textarea>
+
+<button type="submit">Submit</button>
+
+</form>
+
+<p><a href="login.html">Admin Login</a></p>
+<p><a href="admin.html">View Admin Dashboard</a></p>
+
+</main>
+
+<script>
+document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch('http://localhost:5000/api/submit-feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            document.getElementById('successMessage').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            e.target.reset();
+        } else {
+            const error = await response.json();
+            document.getElementById('errorMessage').innerText = error.error || 'Submission failed.';
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+    } catch (err) {
+        document.getElementById('errorMessage').innerText = 'Network error. Please try again later.';
+        document.getElementById('errorMessage').style.display = 'block';
+        document.getElementById('successMessage').style.display = 'none';
+    }
+});
+</script>
+
+<footer>
+<p>© 2026 Online Feedback Collector</p>
+</footer>
+
+</body>
+</html>

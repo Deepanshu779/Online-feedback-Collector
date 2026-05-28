@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback Collector - Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<header>
+<h1>Online Feedback Collector</h1>
+<nav>
+<a href="index.html">Home</a>
+<a href="login.html">Admin Login</a>
+<a href="admin.html">Dashboard</a>
+</nav>
+</header>
+
+<main class="container">
+<h2>Admin Login</h2>
+
+<form id="loginForm">
+
+<label>Username</label>
+<input type="text" name="username" required>
+
+<label>Password</label>
+<div class="password-box" style="position: relative;">
+<input type="password" name="password" id="password" required style="padding-right: 40px;">
+<i class="fa-solid fa-eye toggle-password" id="togglePassword" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #94a3b8;"></i>
+</div>
+
+<p id="errorMessage" style="color: #ef4444; display:none; margin-bottom: 20px; font-weight: 500;"></p>
+
+<button type="submit">Login</button>
+<p style="text-align: center; margin-top: 20px;">Don't have an account? <a href="signup.html">Sign Up</a></p>
+
+</form>
+
+</main>
+
+<script>
+document.getElementById('togglePassword').addEventListener('click', function () {
+    const pwd = document.getElementById('password');
+    if (pwd.type === 'password') {
+        pwd.type = 'text';
+        this.classList.remove('fa-eye');
+        this.classList.add('fa-eye-slash');
+    } else {
+        pwd.type = 'password';
+        this.classList.remove('fa-eye-slash');
+        this.classList.add('fa-eye');
+    }
+});
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch('http://localhost:5000/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            window.location.href = 'admin.html';
+        } else {
+            const err = await response.json();
+            const errMsg = document.getElementById('errorMessage');
+            errMsg.innerText = err.error || 'Login failed';
+            errMsg.style.display = 'block';
+        }
+    } catch (err) {
+        const errMsg = document.getElementById('errorMessage');
+        errMsg.innerText = 'Network error. Make sure backend is running.';
+        errMsg.style.display = 'block';
+    }
+});
+</script>
+
+<footer>
+<p>© 2026 Online Feedback Collector</p>
+</footer>
+</body>
+</html>

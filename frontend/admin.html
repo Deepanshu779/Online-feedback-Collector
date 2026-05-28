@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback Collector - Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header>
+<h1>Online Feedback Collector</h1>
+<nav>
+<a href="index.html">Home</a>
+<a href="login.html">Admin Login</a>
+<a href="admin.html">Dashboard</a>
+<a href="#" id="logoutBtn">Logout</a>
+</nav>
+</header>
+
+<main class="container">
+<h2>Admin Dashboard</h2>
+
+<div class="stats">
+<div class="card">
+    <h3>Total Feedback</h3>
+    <p id="totalCount">0</p>
+</div>
+<div class="card">
+    <h3>Average Rating</h3>
+    <p id="avgRating">0.0</p>
+</div>
+</div>
+
+<p style="text-align: right;">
+<a href="http://localhost:5000/api/export-csv"><button style="width: auto;"><i class="fa-solid fa-download"></i> Export to CSV</button></a>
+</p>
+
+<table>
+<thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Rating</th>
+        <th>Comments</th>
+        <th>Date Submitted</th>
+        <th>Action</th>
+    </tr>
+</thead>
+<tbody id="feedbackTableBody">
+    <!-- Rows will be injected here -->
+</tbody>
+</table>
+
+<div id="ratingChartContainer" style="margin-top: 20px; background-color: rgba(30, 41, 59, 0.8); backdrop-filter: blur(12px); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);">
+<select id="chartType" style="margin-bottom: 20px; width: 200px; display: block;">
+    <option value="bar">Bar Chart</option>
+    <option value="pie">Pie Chart</option>
+    <option value="doughnut">Doughnut Chart</option>
+</select>
+<canvas id="ratingChartCanvas"></canvas>
+</div>
+</main>
+
+<script>
+let chartInstance = null;
+let currentChartType = 'bar';
+
+async function fetchDashboardData() {
+    try {
+        const response = await fetch('http://localhost:5000/api/admin-dashboard', {
+            credentials: 'include'
+        });
+        
+        if (response.status === 401) {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('totalCount').innerText = data.total;
+            document.getElementById('avgRating').innerText = data.avg.toFixed(1);
+            
+            const tbody = document.getElementById('feedbackTableBody');
+            tbody.innerHTML = '';
+            
+            const ratingsCount = {1:0, 2:0, 3:0, 4:0, 5:0};
+            
+            data.data.forEach(item => {
+                ratingsCount[item.rating] = (ratingsCount[item.rating] || 0) + 1;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${item.name}</td>
+                    <td>${item.email}</td>
+                    <td>${'★'.repeat(item.rating)}${'☆'.repeat(5-item.rating)}</td>
+                    <td>${item.comments}</td>
+                    <td>${item.date_submitted}</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteFeedback(${item.id})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            renderChart(ratingsCount, currentChartType);
+        }
+    } catch (err) {
+        console.error('Failed to fetch dashboard data', err);
+    }
+}
+
+async function deleteFeedback(id) {
+    if (confirm('Are you sure you want to delete this feedback?')) {
+        try {
+            const res = await fetch(`http://localhost:5000/api/delete/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (res.ok) {
+                fetchDashboardData();
+            } else {
+                alert('Failed to delete.');
+            }
+        } catch(err) {
+            alert('Error deleting feedback.');
+        }
+    }
+}
+
+document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+        await fetch('http://localhost:5000/api/logout', { method: 'POST', credentials: 'include' });
+        window.location.href = 'login.html';
+    } catch (err) {
+        console.error('Logout failed', err);
+    }
+});
+
+function renderChart(ratingsCount, type) {
+    const ctx = document.getElementById('ratingChartCanvas').getContext('2d');
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+    
+    chartInstance = new Chart(ctx, {
+        type: type,
+        data: {
+            labels: ['1 Star', '2 Stars', '3 Stars', '4 Stars', '5 Stars'],
+            datasets: [{
+                label: 'Number of Ratings',
+                data: [ratingsCount[1], ratingsCount[2], ratingsCount[3], ratingsCount[4], ratingsCount[5]],
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.7)',
+                    'rgba(249, 115, 22, 0.7)',
+                    'rgba(234, 179, 8, 0.7)',
+                    'rgba(132, 204, 22, 0.7)',
+                    'rgba(34, 197, 94, 0.7)'
+                ],
+                borderColor: [
+                    'rgb(239, 68, 68)',
+                    'rgb(249, 115, 22)',
+                    'rgb(234, 179, 8)',
+                    'rgb(132, 204, 22)',
+                    'rgb(34, 197, 94)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: type === 'bar' ? {
+                y: { beginAtZero: true, ticks: { stepSize: 1, color: '#f8fafc' }, grid: { color: '#334155' } },
+                x: { ticks: { color: '#f8fafc' }, grid: { color: '#334155' } }
+            } : {},
+            plugins: {
+                legend: { labels: { color: '#f8fafc' } }
+            }
+        }
+    });
+}
+
+document.getElementById('chartType').addEventListener('change', (e) => {
+    currentChartType = e.target.value;
+    fetchDashboardData();
+});
+
+// Initial load
+fetchDashboardData();
+</script>
+
+<footer>
+<p>© 2026 Online Feedback Collector</p>
+</footer>
+</body>
+</html>
