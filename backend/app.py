@@ -12,11 +12,16 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 CORS(app, supports_credentials=True)
 
-# Important for local development with different ports (e.g. 5000 and 8000)
-# Note: For production with HTTPS, set SESSION_COOKIE_SECURE=True and SESSION_COOKIE_SAMESITE='None'
-app.config.update(
-    SESSION_COOKIE_SAMESITE='Lax',
-)
+# Configure cookies dynamically for local development vs production deployment on Render
+if os.environ.get("RENDER"):
+    app.config.update(
+        SESSION_COOKIE_SAMESITE='None',
+        SESSION_COOKIE_SECURE=True,
+    )
+else:
+    app.config.update(
+        SESSION_COOKIE_SAMESITE='Lax',
+    )
 
 DB_PATH = "database.db"
 
@@ -50,6 +55,9 @@ def init_db():
             )
             """
         )
+
+# Initialize database tables on app startup
+init_db()
 
 
 @app.route("/api/submit-feedback", methods=["POST"])
