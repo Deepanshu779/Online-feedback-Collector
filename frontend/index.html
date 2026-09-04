@@ -3,104 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Feedback Collector - Home</title>
+<meta name="description" content="Share your experience with our simple online feedback form.">
+<title>Feedback Collector — Share Your Feedback</title>
 <link rel="stylesheet" href="static/css/style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-
 <header>
-<h1>Online Feedback Collector</h1>
-<nav>
-<a href="index.html">Home</a>
-<a href="login.html">Admin Login</a>
-<a href="admin.html">Dashboard</a>
-</nav>
+  <div class="nav-shell">
+    <a class="brand" href="index.html"><span class="brand-mark"><i class="fa-solid fa-comment-dots"></i></span>Feedback Collector</a>
+    <nav aria-label="Main navigation">
+      <a class="active" href="index.html">Home</a>
+      <a href="login.html">Admin</a>
+    </nav>
+  </div>
 </header>
 
-<main class="container">
-<h2>Submit Feedback</h2>
+<main class="page-shell">
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Your voice matters</span>
+      <h1>Tell us what you think.</h1>
+      <p>Share your experience in under a minute. Your feedback helps us build a better experience.</p>
+    </div>
+    <div class="hero-icon" aria-hidden="true"><i class="fa-regular fa-message"></i></div>
+  </section>
 
-<form id="feedbackForm">
+  <section class="form-card" aria-labelledby="feedback-heading">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">Feedback form</span>
+        <h2 id="feedback-heading">How was your experience?</h2>
+      </div>
+      <span class="required-note">* Required</span>
+    </div>
 
-<label>Name</label>
-<input type="text" name="name" required maxlength="100" placeholder="Enter your full name">
+    <form id="feedbackForm" novalidate>
+      <div class="field-grid">
+        <div class="field">
+          <label for="name">Name <span>*</span></label>
+          <input id="name" type="text" name="name" required maxlength="100" autocomplete="name" placeholder="Enter your full name">
+        </div>
+        <div class="field">
+          <label for="email">Email <span>*</span></label>
+          <input id="email" type="email" name="email" required maxlength="120" autocomplete="email" placeholder="you@example.com">
+        </div>
+      </div>
 
-<label>Email</label>
-<input type="email" name="email" required maxlength="120" placeholder="Enter your email">
+      <fieldset class="field rating-field">
+        <legend>Overall rating <span>*</span></legend>
+        <div class="rating" role="radiogroup" aria-label="Overall rating from 1 to 5 stars">
+          <input type="radio" name="rating" value="5" id="star5"><label for="star5" title="5 stars">★</label>
+          <input type="radio" name="rating" value="4" id="star4"><label for="star4" title="4 stars">★</label>
+          <input type="radio" name="rating" value="3" id="star3"><label for="star3" title="3 stars">★</label>
+          <input type="radio" name="rating" value="2" id="star2"><label for="star2" title="2 stars">★</label>
+          <input type="radio" name="rating" value="1" id="star1"><label for="star1" title="1 star">★</label>
+        </div>
+      </fieldset>
 
-<label>Rating</label>
+      <div class="field">
+        <label for="comments">Comments</label>
+        <textarea id="comments" name="comments" rows="5" maxlength="1000" placeholder="What did you like? What could we improve?"></textarea>
+        <div class="field-meta"><span>Optional</span><span id="charCount">0 / 1000</span></div>
+      </div>
 
-<div class="rating">
-
-<input type="radio" name="rating" value="5" id="star5">
-<label for="star5">★</label>
-
-<input type="radio" name="rating" value="4" id="star4">
-<label for="star4">★</label>
-
-<input type="radio" name="rating" value="3" id="star3">
-<label for="star3">★</label>
-
-<input type="radio" name="rating" value="2" id="star2">
-<label for="star2">★</label>
-
-<input type="radio" name="rating" value="1" id="star1">
-<label for="star1">★</label>
-
-</div>
-
-<p id="successMessage" style="color:green; display:none;">Thank you! Feedback submitted successfully.</p>
-<p id="errorMessage" style="color:red; display:none;"></p>
-
-<label>Comments</label>
-<textarea name="comments" rows="4" maxlength="1000" placeholder="Share your feedback"></textarea>
-
-<button type="submit">Submit</button>
-
-</form>
-
-<p><a href="login.html">Admin Login</a></p>
-<p><a href="admin.html">View Admin Dashboard</a></p>
-
+      <div id="formMessage" class="form-message" role="status" aria-live="polite"></div>
+      <button id="submitBtn" type="submit"><i class="fa-solid fa-paper-plane"></i><span>Submit feedback</span></button>
+    </form>
+  </section>
 </main>
 
+<footer><p>© 2026 Feedback Collector · Built for honest feedback.</p></footer>
+
 <script>
-document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
+const API_BASE = window.__FEEDBACK_API__ || window.location.protocol.startsWith('http') ? '' : 'http://localhost:5000';
+const form = document.getElementById('feedbackForm');
+const message = document.getElementById('formMessage');
+const button = document.getElementById('submitBtn');
+const comments = document.getElementById('comments');
+const charCount = document.getElementById('charCount');
 
-    try {
-        const response = await fetch('http://localhost:5000/api/submit-feedback', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        });
+comments.addEventListener('input', () => { charCount.textContent = `${comments.value.length} / 1000`; });
 
-        if (response.ok) {
-            document.getElementById('successMessage').style.display = 'block';
-            document.getElementById('errorMessage').style.display = 'none';
-            e.target.reset();
-        } else {
-            const error = await response.json();
-            document.getElementById('errorMessage').innerText = error.error || 'Submission failed.';
-            document.getElementById('errorMessage').style.display = 'block';
-            document.getElementById('successMessage').style.display = 'none';
-        }
-    } catch (err) {
-        document.getElementById('errorMessage').innerText = 'Network error. Please try again later.';
-        document.getElementById('errorMessage').style.display = 'block';
-        document.getElementById('successMessage').style.display = 'none';
-    }
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  message.className = 'form-message';
+  message.textContent = '';
+
+  if (!form.reportValidity()) return;
+  const data = Object.fromEntries(new FormData(form).entries());
+  if (!data.rating) {
+    message.className = 'form-message error';
+    message.textContent = 'Please choose a star rating.';
+    return;
+  }
+
+  button.disabled = true;
+  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Submitting…</span>';
+  try {
+    const response = await fetch(`${API_BASE}/api/submit-feedback`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(data)
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Submission failed.');
+    message.className = 'form-message success';
+    message.textContent = 'Thanks! Your feedback has been submitted successfully.';
+    form.reset();
+    charCount.textContent = '0 / 1000';
+  } catch (error) {
+    message.className = 'form-message error';
+    message.textContent = error.message || 'Network error. Please try again.';
+  } finally {
+    button.disabled = false;
+    button.innerHTML = '<i class="fa-solid fa-paper-plane"></i><span>Submit feedback</span>';
+  }
 });
 </script>
-
-<footer>
-<p>© 2026 Online Feedback Collector</p>
-</footer>
-
 </body>
 </html>
