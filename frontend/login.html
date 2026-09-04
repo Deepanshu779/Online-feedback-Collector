@@ -1,31 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Secure admin login for Feedback Collector.">
-<title>Feedback Collector — Admin Login</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="static/css/style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-</head>
-<body>
-<header><div class="nav-shell"><a class="brand" href="index.html"><span class="brand-mark"><i class="fa-solid fa-comment-dots"></i></span>Feedback Collector</a><nav><a href="index.html">Public form</a><a class="active" href="login.html">Admin</a></nav></div></header>
-<main class="auth-shell"><section class="auth-card">
-<a class="back-link" href="index.html"><i class="fa-solid fa-arrow-left"></i> Back to feedback form</a>
-<span class="section-kicker">Admin workspace</span><h2 style="margin:6px 0 8px;">Welcome back</h2><p class="muted" style="margin:0 0 26px;">Sign in to review and manage submitted feedback.</p>
-<form id="loginForm">
-<div class="field"><label for="username">Username</label><input id="username" type="text" name="username" required maxlength="80" autocomplete="username" placeholder="Your username"></div>
-<div class="field"><label for="password">Password</label><div class="password-box"><input id="password" type="password" name="password" required autocomplete="current-password" placeholder="Your password"><i class="fa-solid fa-eye toggle-password" id="togglePassword" aria-label="Show password" role="button" tabindex="0"></i></div></div>
-<div id="errorMessage" class="form-message error" role="alert"></div>
-<button type="submit" id="loginBtn"><i class="fa-solid fa-right-to-bracket"></i><span>Sign in</span></button>
-<p style="text-align:center;margin:18px 0 0;color:var(--muted);">Need an account? <a href="signup.html">Create one</a></p>
-</form></section></main>
-<footer><p>© 2026 Feedback Collector · Secure admin access</p></footer>
-<script>
-const form=document.getElementById('loginForm'), pwd=document.getElementById('password'), toggle=document.getElementById('togglePassword'), error=document.getElementById('errorMessage'), btn=document.getElementById('loginBtn');
-function togglePassword(){ const show=pwd.type==='password'; pwd.type=show?'text':'password'; toggle.className=show?'fa-solid fa-eye-slash toggle-password':'fa-solid fa-eye toggle-password'; }
-toggle.addEventListener('click',togglePassword); toggle.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();togglePassword();}});
-form.addEventListener('submit',async e=>{e.preventDefault(); error.textContent=''; if(!form.reportValidity())return; btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i><span>Signing in…</span>'; try{const response=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.error||'Login failed.'); window.location.href='admin.html';}catch(err){error.textContent=err.message||'Unable to sign in.';}finally{btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i><span>Sign in</span>';}});
-</script>
-</body></html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="description" content="Secure admin login for Feedback Collector."><title>Feedback Collector — Admin Login</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="static/css/style.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"></head>
+<body><header><div class="nav-shell"><a class="brand" href="index.html"><span class="brand-mark"><i class="fa-solid fa-comment-dots"></i></span>Feedback Collector</a><nav><a href="index.html">Public form</a><a class="active" href="login.html">Admin</a></nav></div></header>
+<main class="auth-shell"><section class="auth-card"><a class="back-link" href="index.html"><i class="fa-solid fa-arrow-left"></i> Back to feedback form</a><span class="section-kicker">Admin workspace</span><h2 style="margin:6px 0 8px;">Welcome back</h2><p class="muted" style="margin:0 0 26px;">Sign in to review and manage submitted feedback.</p><form id="loginForm"><div class="field"><label for="username">Username</label><input id="username" type="text" name="username" required maxlength="80" autocomplete="username" placeholder="Your username"></div><div class="field"><label for="password">Password</label><div class="password-box"><input id="password" type="password" name="password" required autocomplete="current-password" placeholder="Your password"><i class="fa-solid fa-eye toggle-password" id="togglePassword" aria-label="Show password" role="button" tabindex="0"></i></div></div><div id="errorMessage" class="form-message error" role="alert"></div><button type="submit" id="loginBtn"><i class="fa-solid fa-right-to-bracket"></i><span>Sign in</span></button><p style="text-align:center;margin:18px 0 0;color:var(--muted);">Need an account? <a href="signup.html">Create one</a></p></form></section></main><footer><p>© 2026 Feedback Collector · Secure admin access</p></footer>
+<script>const form=document.getElementById('loginForm'),pwd=document.getElementById('password'),toggle=document.getElementById('togglePassword'),error=document.getElementById('errorMessage'),btn=document.getElementById('loginBtn');function togglePassword(){const show=pwd.type==='password';pwd.type=show?'text':'password';toggle.className=show?'fa-solid fa-eye-slash toggle-password':'fa-solid fa-eye toggle-password';}toggle.addEventListener('click',togglePassword);toggle.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();togglePassword();}});form.addEventListener('submit',async e=>{e.preventDefault();error.textContent='';if(!form.reportValidity())return;btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i><span>Signing in…</span>';try{const response=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Login failed.');window.location.href='admin.html';}catch(err){error.textContent=err.message||'Unable to sign in.';}finally{btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i><span>Sign in</span>';}});</script></body></html>
