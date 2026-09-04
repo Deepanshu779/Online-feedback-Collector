@@ -3,90 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Feedback Collector - Login</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="description" content="Secure admin login for Feedback Collector.">
+<title>Feedback Collector — Admin Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="static/css/style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-
-<header>
-<h1>Online Feedback Collector</h1>
-<nav>
-<a href="index.html">Home</a>
-<a href="login.html">Admin Login</a>
-<a href="admin.html">Dashboard</a>
-</nav>
-</header>
-
-<main class="container">
-<h2>Admin Login</h2>
-
+<header><div class="nav-shell"><a class="brand" href="index.html"><span class="brand-mark"><i class="fa-solid fa-comment-dots"></i></span>Feedback Collector</a><nav><a href="index.html">Public form</a><a class="active" href="login.html">Admin</a></nav></div></header>
+<main class="auth-shell"><section class="auth-card">
+<a class="back-link" href="index.html"><i class="fa-solid fa-arrow-left"></i> Back to feedback form</a>
+<span class="section-kicker">Admin workspace</span><h2 style="margin:6px 0 8px;">Welcome back</h2><p class="muted" style="margin:0 0 26px;">Sign in to review and manage submitted feedback.</p>
 <form id="loginForm">
-
-<label>Username</label>
-<input type="text" name="username" required>
-
-<label>Password</label>
-<div class="password-box" style="position: relative;">
-<input type="password" name="password" id="password" required style="padding-right: 40px;">
-<i class="fa-solid fa-eye toggle-password" id="togglePassword" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #94a3b8;"></i>
-</div>
-
-<p id="errorMessage" style="color: #ef4444; display:none; margin-bottom: 20px; font-weight: 500;"></p>
-
-<button type="submit">Login</button>
-<p style="text-align: center; margin-top: 20px;">Don't have an account? <a href="signup.html">Sign Up</a></p>
-
-</form>
-
-</main>
-
+<div class="field"><label for="username">Username</label><input id="username" type="text" name="username" required maxlength="80" autocomplete="username" placeholder="Your username"></div>
+<div class="field"><label for="password">Password</label><div class="password-box"><input id="password" type="password" name="password" required autocomplete="current-password" placeholder="Your password"><i class="fa-solid fa-eye toggle-password" id="togglePassword" aria-label="Show password" role="button" tabindex="0"></i></div></div>
+<div id="errorMessage" class="form-message error" role="alert"></div>
+<button type="submit" id="loginBtn"><i class="fa-solid fa-right-to-bracket"></i><span>Sign in</span></button>
+<p style="text-align:center;margin:18px 0 0;color:var(--muted);">Need an account? <a href="signup.html">Create one</a></p>
+</form></section></main>
+<footer><p>© 2026 Feedback Collector · Secure admin access</p></footer>
 <script>
-document.getElementById('togglePassword').addEventListener('click', function () {
-    const pwd = document.getElementById('password');
-    if (pwd.type === 'password') {
-        pwd.type = 'text';
-        this.classList.remove('fa-eye');
-        this.classList.add('fa-eye-slash');
-    } else {
-        pwd.type = 'password';
-        this.classList.remove('fa-eye-slash');
-        this.classList.add('fa-eye');
-    }
-});
-
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-
-    try {
-        const response = await fetch('http://localhost:5000/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            credentials: 'include'
-        });
-
-        if (response.ok) {
-            window.location.href = 'admin.html';
-        } else {
-            const err = await response.json();
-            const errMsg = document.getElementById('errorMessage');
-            errMsg.innerText = err.error || 'Login failed';
-            errMsg.style.display = 'block';
-        }
-    } catch (err) {
-        const errMsg = document.getElementById('errorMessage');
-        errMsg.innerText = 'Network error. Make sure backend is running.';
-        errMsg.style.display = 'block';
-    }
-});
+const form=document.getElementById('loginForm'), pwd=document.getElementById('password'), toggle=document.getElementById('togglePassword'), error=document.getElementById('errorMessage'), btn=document.getElementById('loginBtn');
+function togglePassword(){ const show=pwd.type==='password'; pwd.type=show?'text':'password'; toggle.className=show?'fa-solid fa-eye-slash toggle-password':'fa-solid fa-eye toggle-password'; }
+toggle.addEventListener('click',togglePassword); toggle.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();togglePassword();}});
+form.addEventListener('submit',async e=>{e.preventDefault(); error.textContent=''; if(!form.reportValidity())return; btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i><span>Signing in…</span>'; try{const response=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.error||'Login failed.'); window.location.href='admin.html';}catch(err){error.textContent=err.message||'Unable to sign in.';}finally{btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i><span>Sign in</span>';}});
 </script>
-
-<footer>
-<p>© 2026 Online Feedback Collector</p>
-</footer>
-</body>
-</html>
+</body></html>
