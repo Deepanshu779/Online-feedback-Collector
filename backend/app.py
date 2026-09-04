@@ -1,29 +1,29 @@
 import csv
 import io
 import os
+import re
 import sqlite3
-from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timezone
+from functools import wraps
 
 from flask import Flask, Response, jsonify, request, session
 from flask_cors import CORS
+from werkzeug.security import check_password_hash, generate_password_hash
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE_DIR, "database.db"))
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="None" if os.environ.get("RENDER") else "Lax",
+    SESSION_COOKIE_SECURE=bool(os.environ.get("RENDER")),
+    MAX_CONTENT_LENGTH=64 * 1024,
+)
 CORS(app, supports_credentials=True)
 
-# Configure cookies dynamically for local development vs production deployment on Render
-if os.environ.get("RENDER"):
-    app.config.update(
-        SESSION_COOKIE_SAMESITE='None',
-        SESSION_COOKIE_SECURE=True,
-    )
-else:
-    app.config.update(
-        SESSION_COOKIE_SAMESITE='Lax',
-    )
-
-DB_PATH = "database.db"
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def get_db_connection():
@@ -33,16 +33,17 @@ def get_db_connection():
 
 
 def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     with get_db_connection() as conn:
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS feedback(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                email TEXT,
-                rating INTEGER,
-                comments TEXT,
-                date_submitted TEXT
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+                comments TEXT DEFAULT '',
+                date_submitted TEXT NOT NULL
             )
             """
         )
@@ -50,162 +51,189 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS users(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE,
-                password TEXT
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL
             )
             """
         )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_feedback_rating ON feedback(rating)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_feedback_date ON feedback(date_submitted)")
 
-# Initialize database tables on app startup
+
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("is_admin"):
+            return jsonify({"error": "Unauthorized"}), 401
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def clean_text(value, limit):
+    return str(value or "").strip()[:limit]
+
+
 init_db()
 
 
-@app.route("/api/submit-feedback", methods=["POST"])
+@app.get("/api/health")
+def health():
+    return jsonify({"status": "ok"})
+
+
+@app.post("/api/submit-feedback")
 def submit_feedback():
-    data = request.json or request.form
-    name = data.get("name", "").strip()
-    email = data.get("email", "").strip()
-    comments = data.get("comments", "").strip()
+    data = request.get_json(silent=True) or request.form
+    name = clean_text(data.get("name"), 100)
+    email = clean_text(data.get("email"), 120).lower()
+    comments = clean_text(data.get("comments"), 1000)
 
     try:
         rating = int(data.get("rating", 0))
-    except ValueError:
-        return jsonify({"error": "Invalid rating"}), 400
-
-    if not (1 <= rating <= 5):
-        return jsonify({"error": "Rating must be between 1 and 5"}), 400
+    except (TypeError, ValueError):
+        return jsonify({"error": "Rating must be a number from 1 to 5"}), 400
 
     if not name or not email:
         return jsonify({"error": "Name and email are required"}), 400
+    if not EMAIL_RE.match(email):
+        return jsonify({"error": "Please enter a valid email address"}), 400
+    if not 1 <= rating <= 5:
+        return jsonify({"error": "Rating must be between 1 and 5"}), 400
 
-    submitted_at = datetime.now().isoformat(timespec="seconds")
-
+    submitted_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with get_db_connection() as conn:
         conn.execute(
-            """
-            INSERT INTO feedback(name, email, rating, comments, date_submitted)
-            VALUES (?, ?, ?, ?, ?)
-            """,
+            "INSERT INTO feedback(name, email, rating, comments, date_submitted) VALUES (?, ?, ?, ?, ?)",
             (name, email, rating, comments, submitted_at),
         )
 
     return jsonify({"message": "Feedback submitted successfully"}), 201
 
 
-@app.route("/api/delete/<int:id>", methods=["DELETE"])
-def delete_feedback(id):
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 401
-
-    conn = get_db_connection()
-    conn.execute("DELETE FROM feedback WHERE id=?", (id,))
-    conn.commit()
-    conn.close()
+@app.delete("/api/delete/<int:feedback_id>")
+@admin_required
+def delete_feedback(feedback_id):
+    with get_db_connection() as conn:
+        cursor = conn.execute("DELETE FROM feedback WHERE id = ?", (feedback_id,))
+        if cursor.rowcount == 0:
+            return jsonify({"error": "Feedback not found"}), 404
 
     return jsonify({"message": "Feedback deleted successfully"})
 
 
-@app.route("/api/admin-dashboard", methods=["GET"])
-def admin():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 401
-
+@app.get("/api/admin-dashboard")
+@admin_required
+def admin_dashboard():
     with get_db_connection() as conn:
-        data = conn.execute("SELECT * FROM feedback ORDER BY id ASC").fetchall()
+        data = conn.execute("SELECT * FROM feedback ORDER BY id DESC").fetchall()
         avg = conn.execute("SELECT AVG(rating) FROM feedback").fetchone()[0] or 0
         total = conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
+        ratings = conn.execute(
+            "SELECT rating, COUNT(*) AS count FROM feedback GROUP BY rating ORDER BY rating"
+        ).fetchall()
 
-    return jsonify({
-        "data": [dict(row) for row in data],
-        "avg": avg,
-        "total": total
-    })
+    return jsonify(
+        {
+            "data": [dict(row) for row in data],
+            "avg": round(float(avg), 2),
+            "total": total,
+            "ratings": {str(row["rating"]): row["count"] for row in ratings},
+        }
+    )
 
 
-@app.route("/api/export-csv", methods=["GET"])
+@app.get("/api/export-csv")
+@admin_required
 def export_csv():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 401
-
     with get_db_connection() as conn:
         rows = conn.execute(
-            "SELECT id, name, email, rating, comments, date_submitted FROM feedback ORDER BY id ASC"
+            "SELECT id, name, email, rating, comments, date_submitted FROM feedback ORDER BY id DESC"
         ).fetchall()
 
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["id", "name", "email", "rating", "comments", "date_submitted"])
-    for row in rows:
-        writer.writerow([row["id"], row["name"], row["email"], row["rating"], row["comments"], row["date_submitted"]])
+    writer.writerows(
+        [row["id"], row["name"], row["email"], row["rating"], row["comments"], row["date_submitted"]]
+        for row in rows
+    )
 
     return Response(
         output.getvalue(),
-        mimetype="text/csv",
+        mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition": "attachment; filename=feedback.csv"},
     )
 
 
-@app.route("/api/feedback", methods=["GET"])
+@app.get("/api/feedback")
 def api_feedback():
     with get_db_connection() as conn:
         rows = conn.execute(
-            "SELECT id, name, email, rating, comments, date_submitted FROM feedback ORDER BY id ASC"
+            "SELECT id, name, email, rating, comments, date_submitted FROM feedback ORDER BY id DESC"
         ).fetchall()
-
-    payload = [dict(row) for row in rows]
-    return jsonify(payload)
+    return jsonify([dict(row) for row in rows])
 
 
-@app.route("/api/login", methods=["POST"])
+@app.post("/api/login")
 def login():
-    data = request.json or request.form
-    username = data.get("username", "")
-    password = data.get("password", "")
+    data = request.get_json(silent=True) or request.form
+    username = clean_text(data.get("username"), 80)
+    password = str(data.get("password") or "")
 
     with get_db_connection() as conn:
         user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
 
-    if user and check_password_hash(user["password"], password):
-        session["is_admin"] = True
-        session["user_id"] = user["id"]
-        return jsonify({"message": "Logged in successfully", "username": username})
+    if not user or not check_password_hash(user["password"], password):
+        return jsonify({"error": "Invalid username or password"}), 401
 
-    return jsonify({"error": "Invalid username or password"}), 401
+    session.clear()
+    session["is_admin"] = True
+    session["user_id"] = user["id"]
+    session["username"] = user["username"]
+    return jsonify({"message": "Logged in successfully", "username": user["username"]})
 
 
-@app.route("/api/signup", methods=["POST"])
+@app.post("/api/signup")
 def signup():
-    data = request.json or request.form
-    username = data.get("username", "").strip()
-    password = data.get("password", "")
+    data = request.get_json(silent=True) or request.form
+    username = clean_text(data.get("username"), 80)
+    password = str(data.get("password") or "")
 
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
+    if len(username) < 3:
+        return jsonify({"error": "Username must be at least 3 characters"}), 400
+    if len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
 
-    with get_db_connection() as conn:
-        existing = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-        if existing:
-            return jsonify({"error": "Username already exists"}), 400
-
-        hashed_pw = generate_password_hash(password)
-        conn.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_pw))
+    try:
+        with get_db_connection() as conn:
+            conn.execute(
+                "INSERT INTO users (username, password) VALUES (?, ?)",
+                (username, generate_password_hash(password)),
+            )
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Username already exists"}), 409
 
     return jsonify({"message": "User created successfully"}), 201
 
 
-@app.route("/api/logout", methods=["POST"])
+@app.post("/api/logout")
 def logout():
     session.clear()
     return jsonify({"message": "Logged out successfully"})
 
 
-@app.route("/api/session", methods=["GET"])
+@app.get("/api/session")
 def check_session():
-    if session.get("is_admin"):
-        return jsonify({"is_admin": True})
-    return jsonify({"is_admin": False})
+    return jsonify(
+        {
+            "is_admin": bool(session.get("is_admin")),
+            "username": session.get("username"),
+        }
+    )
 
 
 if __name__ == "__main__":
-    init_db()
-    app.run(debug=True, port=5000)
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1", host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
