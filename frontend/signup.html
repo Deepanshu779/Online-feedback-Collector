@@ -1,99 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Feedback Collector - Sign Up</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="static/css/style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Create an admin account for Feedback Collector.">
+<title>Feedback Collector — Create Admin Account</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="static/css/style.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-
-<header>
-<h1>Online Feedback Collector</h1>
-<nav>
-<a href="index.html">Home</a>
-<a href="login.html">Admin Login</a>
-<a href="admin.html">Dashboard</a>
-</nav>
-</header>
-
-<main class="container">
-<h2>Admin Sign Up</h2>
-
+<header><div class="nav-shell"><a class="brand" href="index.html"><span class="brand-mark"><i class="fa-solid fa-comment-dots"></i></span>Feedback Collector</a><nav><a href="index.html">Public form</a><a class="active" href="login.html">Admin</a></nav></div></header>
+<main class="auth-shell"><section class="auth-card">
+<a class="back-link" href="login.html"><i class="fa-solid fa-arrow-left"></i> Back to login</a>
+<span class="section-kicker">Admin workspace</span><h2 style="margin:6px 0 8px;">Create your account</h2><p class="muted" style="margin:0 0 26px;">Use a strong password. This account can access all submitted feedback.</p>
 <form id="signupForm">
-
-<label>Username</label>
-<input type="text" name="username" required>
-
-<label>Password</label>
-<div class="password-box" style="position: relative;">
-<input type="password" name="password" id="password" required style="padding-right: 40px;">
-<i class="fa-solid fa-eye toggle-password" id="togglePassword" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #94a3b8;"></i>
-</div>
-
-<p id="errorMessage" style="color: #ef4444; display:none; margin-bottom: 20px; font-weight: 500;"></p>
-<p id="successMessage" style="color: #10b981; display:none; margin-bottom: 20px; font-weight: 500;"></p>
-
-<button type="submit">Sign Up</button>
-<p style="text-align: center; margin-top: 20px;">Already have an account? <a href="login.html">Login</a></p>
-
-</form>
-
-</main>
-
+<div class="field"><label for="username">Username</label><input id="username" type="text" name="username" required minlength="3" maxlength="80" autocomplete="username" placeholder="Choose a username"></div>
+<div class="field"><label for="password">Password</label><div class="password-box"><input id="password" type="password" name="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters"><i class="fa-solid fa-eye toggle-password" id="togglePassword" aria-label="Show password" role="button" tabindex="0"></i></div><small class="muted">Minimum 8 characters</small></div>
+<div id="formMessage" class="form-message" role="alert"></div>
+<button type="submit" id="signupBtn"><i class="fa-solid fa-user-plus"></i><span>Create account</span></button>
+<p style="text-align:center;margin:18px 0 0;color:var(--muted);">Already registered? <a href="login.html">Sign in</a></p>
+</form></section></main>
+<footer><p>© 2026 Feedback Collector · Admin account creation</p></footer>
 <script>
-document.getElementById('togglePassword').addEventListener('click', function () {
-    const pwd = document.getElementById('password');
-    if (pwd.type === 'password') {
-        pwd.type = 'text';
-        this.classList.remove('fa-eye');
-        this.classList.add('fa-eye-slash');
-    } else {
-        pwd.type = 'password';
-        this.classList.remove('fa-eye-slash');
-        this.classList.add('fa-eye');
-    }
-});
-
-document.getElementById('signupForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-
-    try {
-        const response = await fetch('http://localhost:5000/api/signup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-
-        if (response.ok) {
-            document.getElementById('successMessage').innerText = 'Signup successful! Redirecting to login...';
-            document.getElementById('successMessage').style.display = 'block';
-            document.getElementById('errorMessage').style.display = 'none';
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 1500);
-        } else {
-            const err = await response.json();
-            const errMsg = document.getElementById('errorMessage');
-            errMsg.innerText = err.error || 'Signup failed';
-            errMsg.style.display = 'block';
-            document.getElementById('successMessage').style.display = 'none';
-        }
-    } catch (err) {
-        const errMsg = document.getElementById('errorMessage');
-        errMsg.innerText = 'Network error. Make sure backend is running.';
-        errMsg.style.display = 'block';
-        document.getElementById('successMessage').style.display = 'none';
-    }
-});
+const form=document.getElementById('signupForm'),pwd=document.getElementById('password'),toggle=document.getElementById('togglePassword'),msg=document.getElementById('formMessage'),btn=document.getElementById('signupBtn');
+function togglePassword(){const show=pwd.type==='password';pwd.type=show?'text':'password';toggle.className=show?'fa-solid fa-eye-slash toggle-password':'fa-solid fa-eye toggle-password';}
+toggle.addEventListener('click',togglePassword);toggle.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();togglePassword();}});
+form.addEventListener('submit',async e=>{e.preventDefault();msg.textContent='';msg.className='form-message';if(!form.reportValidity())return;btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i><span>Creating…</span>';try{const response=await fetch('/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Signup failed.');msg.className='form-message success';msg.textContent='Account created. Redirecting to login…';form.reset();setTimeout(()=>window.location.href='login.html',900);}catch(err){msg.className='form-message error';msg.textContent=err.message||'Unable to create account.';}finally{btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-user-plus"></i><span>Create account</span>';}});
 </script>
-
-<footer>
-<p>© 2026 Online Feedback Collector</p>
-</footer>
-</body>
-</html>
+</body></html>
